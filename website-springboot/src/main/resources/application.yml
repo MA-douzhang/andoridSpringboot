@@ -1,0 +1,25 @@
+server:
+  port: 9091
+  servlet:
+    session:
+      cookie:
+        secure: false
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/auto_web?characterEncoding=UTF-8&useUnicode=true&serverTimezone=GMT%2B8&allowMultiQueries=true
+    username: root
+    password: 123456
+  mvc:
+    hiddenmethod:
+      filter:
+        enabled: true
+
+
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml #????mybatis xml??
+files:
+  upload:
+    path: D://桌面/official-website-master/website-springboot/file/
+
