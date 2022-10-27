@@ -1,34 +1,63 @@
 package com.example.websitespringboot.config.interceptor;
 
+import cn.hutool.core.util.StrUtil;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTVerifier;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.example.websitespringboot.entity.User;
+import com.example.websitespringboot.service.impl.UserServiceImpl;
 import com.sun.net.httpserver.HttpsServer;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Configurable;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+
+@Configuration
 public class MyInterceptor implements HandlerInterceptor {
+  @Autowired
+  private UserServiceImpl userService;
   @Override
   public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-    System.out.println("--------------拦截器-------------");
-    try {
+    String token = request.getHeader("token");
+    if (StrUtil.isBlank(token)) {
+      token = request.getParameter("token");
+    }
 
-//      response.setHeader("Access-Control-Allow-Origin", "http://localhost:20888");
-      //todo ajxs跨域导致session不能找到
-      //统一拦截（查询当前session是否存在user）(这里user会在每次登录成功后，写入session)
-//      request.getSession().setAttribute("user","3333");
-      //为找到header中id会返回undefined
-      String user =  request.getHeader("id");
-      //拦截器 判断是否登录
-//      if(!user.equals("undefined")){
-//        System.out.println("--------------拦截器放行-------------");
-//        return true;
-//      }
-//      response.sendRedirect("/backlogin");
+    // 执行认证
+    if (StrUtil.isBlank(token)) {
+      throw new Exception(token);
+    }
+    // 获取 token 中的adminId
+    String userId;
+    User user;
+    try {
+      userId = JWT.decode(token).getAudience().get(0);
+      // 根据token中的userid查询数据库
+      user = userService.getById(Integer.parseInt(userId));
     } catch (Exception e) {
-      e.printStackTrace();
+      String errMsg = "token验证失败，请重新登录";
+      System.out.println(errMsg + ", token=" + token+e);
+      throw new Exception(errMsg);
+    }
+    if (user == null) {
+      throw new Exception("用户不存在");
+    }
+
+    try {
+      // 用户密码加签验证 token
+      JWTVerifier jwtVerifier = JWT.require(Algorithm.HMAC256(user.getPassword())).build();
+      jwtVerifier.verify(token); // 验证token
+    } catch (JWTVerificationException e) {
+      throw new Exception("token验证失败，请重新登录");
     }
     return true;
   }
